@@ -1,4 +1,4 @@
-# ug-altmetric-year
+# UG Altmetric Year
 Alternative metrics analysis of a year at for the whole University of Groningen.
 
 ## Objective
