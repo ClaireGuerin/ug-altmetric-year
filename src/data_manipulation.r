@@ -49,11 +49,15 @@ clean_outputs <- dataset %>%
            !grepl('UMCG', Departments)
          ) # 3,817 outputs
 
+n_outputs <- dim(clean_outputs)[1]
+
 # Look at mentions 
 names(clean_outputs)
 head(clean_outputs$SSRN)
 mentions <- clean_outputs %>% 
   select(ends_with("mentions"))
+
+mention_sources <- str_replace(names(mentions),".mentions", "")
 
 # Check data type for mentions is numeric
 mentions %>% summarise_all(class)
@@ -67,15 +71,28 @@ sum(mentions$News.mentions)
 total_mentions <- mentions %>%
   summarise(across(News.mentions:Syllabi.mentions, sum))
 
-big_total_mentions <- total_mentions %>%
+n_mentions_total <- total_mentions %>%
   mutate(total_mentions = rowSums(.)) %>%
   select(total_mentions) %>%
   as.numeric
 
 
+# find out how many rows are 0 in all of their columns
 
-clean_outputs %>% 
-  select(contains("mentions")) # look at columns counting mentions
-                                # next step: find out how many rows have a non-zero number in any of their columns
-   
+is_zero <- function(x) {
+  x == 0
+}
 
+non_zero_mentions <- mentions %>%
+  filter(if_any(News.mentions:Syllabi.mentions, ~ . != 0))
+
+all_zero_mentions <- mentions %>%
+  filter(if_all(News.mentions:Syllabi.mentions, ~ . == 0))
+
+n_mentioned_outputs <- dim(non_zero_mentions)[1]
+n_mentioned_outputs == n_outputs - dim(all_zero_mentions)[1] # check that we have the correct number (V)
+
+n_mentioned_outputs*100/n_outputs
+
+non_zero_mentions %>%
+  summarise(across(News.mentions:Syllabi.mentions, list(mean= mean, sum = sum)))
