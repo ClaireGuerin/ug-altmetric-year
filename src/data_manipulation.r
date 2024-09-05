@@ -7,7 +7,7 @@ library(tidyverse)
 ####---- DATA IMPORT ----####
 
 setwd("/home/claire/Documents/git/ug-altmetric-year")
-filepath <- "/home/claire/Documents/git/ug-altmetric-year/data/Altmetric-ResearchOutputs-UniversityofGroningen-2023.csv"
+filepath <- "/home/claire/Documents/git/ug-altmetric-year/data/AltmetricResearchOutputs-UniversityGroningen-2023.csv"
 
 dataset <- read_csv(filepath, # Read input into tibble
                  col_names = TRUE)  %>% 
@@ -27,19 +27,19 @@ non_medical_outputs <- !str_detect(dataset$Subjects..FoR., "Medic") # find which
                                                                     # NB: there are also NAs in this. Maybe combine both methods?
 
 dataset %>%
-  filter(!grepl('Medic|Clinic', Subjects..FoR.)) %>% # 1,507 outputs out of 2,899
+  filter(!grepl('Medic|Clinic', Subjects..FoR.)) %>% # 4,911 outputs out of 8,102 aren't Medic or Clinic topics
   select(Subjects..FoR.)
 
 dataset %>%
-  filter(!grepl('University Medical Center Groningen', Affiliations..GRID.)) %>% # 1,515 outputs out of 2,899
-  filter(grepl('Medic|Clinic', Subjects..FoR.)) # out of which 324 outputs have medical topics
+  filter(!grepl('University Medical Center Groningen', Affiliations..GRID.)) %>% # 4,851 outputs out of 8,102 aren't affiliated to UMCG
+  filter(grepl('Medic|Clinic', Subjects..FoR.)) # out of which 696 outputs have medical topics
 
 dataset %>%
   filter(!grepl('University Medical Center Groningen', Affiliations..GRID.)) %>%
-  filter(!grepl('Medic|Clinic', Subjects..FoR.)) # we should get 1,515 - 324 = 1,191 outputs V
+  filter(!grepl('Medic|Clinic', Subjects..FoR.)) # we should get 4,851 - 696 = 4,155 outputs (V)
 
 dataset %>%
-  filter(!grepl('UMCG', Departments)) # 1,280 outputs out of 2,899
+  filter(!grepl('UMCG', Departments)) # 4,137 outputs out of 2,899 do not belong to the UMCG department
 
 # Remove ALL
 
@@ -47,10 +47,35 @@ clean_outputs <- dataset %>%
   filter(!grepl('University Medical Center Groningen', Affiliations..GRID.) &
            !grepl('Medic|Clinic', Subjects..FoR.) &
            !grepl('UMCG', Departments)
-         ) # 1,136 outputs
+         ) # 3,817 outputs
 
- clean_outputs %>% 
-   select(contains("mentions")) # look at columns counting mentions
+# Look at mentions 
+names(clean_outputs)
+head(clean_outputs$SSRN)
+mentions <- clean_outputs %>% 
+  select(ends_with("mentions"))
+
+# Check data type for mentions is numeric
+mentions %>% summarise_all(class)
+n_variables <- dim(mentions)[2]
+n_variables_numeric <- dim(mentions %>%
+  filter(if_all(is.numeric)) # should return 17 (V)
+  )[2]
+
+n_variables == n_variables_numeric # all good if TRUE (V)
+sum(mentions$News.mentions)
+total_mentions <- mentions %>%
+  summarise(across(News.mentions:Syllabi.mentions, sum))
+
+big_total_mentions <- total_mentions %>%
+  mutate(total_mentions = rowSums(.)) %>%
+  select(total_mentions) %>%
+  as.numeric
+
+
+
+clean_outputs %>% 
+  select(contains("mentions")) # look at columns counting mentions
                                 # next step: find out how many rows have a non-zero number in any of their columns
    
 
