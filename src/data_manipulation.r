@@ -96,3 +96,9 @@ n_mentioned_outputs*100/n_outputs
 
 non_zero_mentions %>%
   summarise(across(News.mentions:Syllabi.mentions, list(mean= mean, sum = sum)))
+
+important_mentions <- mentions %>%
+  select(News.mentions, Blog.mentions, Policy.mentions, Patent.mentions)
+
+important_mentions %>%
+  summarize(across(News.mentions:Patent.mentions, sum))
