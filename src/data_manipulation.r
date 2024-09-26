@@ -50,6 +50,7 @@ clean_outputs <- dataset %>%
          ) # 3,817 outputs
 
 n_outputs <- dim(clean_outputs)[1]
+cat(paste("Total outputs: ", n_outputs, "\n"))
 
 # Look at mentions 
 names(clean_outputs)
@@ -92,13 +93,42 @@ all_zero_mentions <- mentions %>%
 n_mentioned_outputs <- dim(non_zero_mentions)[1]
 n_mentioned_outputs == n_outputs - dim(all_zero_mentions)[1] # check that we have the correct number (V)
 
-n_mentioned_outputs*100/n_outputs
+cat(paste("Out of which, ", n_mentioned_outputs, " were mentioned (", n_mentioned_outputs*100/n_outputs, "%).\n"))
 
 non_zero_mentions %>%
   summarise(across(News.mentions:Syllabi.mentions, list(mean= mean, sum = sum)))
 
-important_mentions <- mentions %>%
-  select(News.mentions, Blog.mentions, Policy.mentions, Patent.mentions)
+# Mentions zoom-in
 
-important_mentions %>%
-  summarize(across(News.mentions:Patent.mentions, sum))
+important_mentions <- mentions %>%
+  select(News.mentions, Blog.mentions, Policy.mentions, Patent.mentions) %>%
+  summarize(across(News.mentions:Patent.mentions, sum)) %>%
+  rowwise() %>% 
+  mutate(t = sum(c(News.mentions, Blog.mentions, Policy.mentions, Patent.mentions))) 
+
+cat(paste("Zooming in on", important_mentions$t, "mentions:\n"))
+cat(paste("\t News:", important_mentions$News.mentions, "(", important_mentions$News.mentions*100/important_mentions$t, "%)\n"))
+cat(paste("\t Blogs:", important_mentions$Blog.mentions, "(", important_mentions$Blog.mentions*100/important_mentions$t, "%)\n"))
+cat(paste("\t Policies:", important_mentions$Policy.mentions, "(", important_mentions$Policy.mentions*100/important_mentions$t, "%)\n"))
+cat(paste("\t Patents:", important_mentions$Patent.mentions, "(", important_mentions$Patent.mentions*100/important_mentions$t, ")\n"))
+
+# Most mentioned topics
+
+names(clean_outputs)
+
+by_topic <- clean_outputs %>%
+  rowwise() %>%
+  mutate(All.Mentions = sum(News.mentions:Syllabi.mentions)) %>%
+  group_by(Subjects..FoR.) %>%
+  summarize(Total.Mentions = sum(All.Mentions))
+
+ordered_topics_by_mentions <- by_topic %>%
+  arrange(desc(Total.Mentions)) 
+
+ordered_topics_by_mentions %>%
+  print(n = 10)
+ 
+# Problem: there can be (and often are) multiple topics associated with a single output!!!
+# -> replicate rows by topic
+
+ordered_topics_by_mentions[1,]
