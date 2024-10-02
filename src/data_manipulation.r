@@ -15,37 +15,37 @@ dataset <- read_csv(filepath, # Read input into tibble
 
 # Remove outputs affiliated with UMCG = University Medical Center Groningen
 
-str_detect(dataset$Affiliations..GRID., "University Medical Center Groningen")
-dataset$Affiliations..GRID.[9]
-dataset[9,]$Affiliations..GRID. # why are there no affiliations??? What to do with NA affiliations? Look at departments instead?
-dataset$Departments[9]
+# str_detect(dataset$Affiliations..GRID., "University Medical Center Groningen")
+# dataset$Affiliations..GRID.[9]
+# dataset[9,]$Affiliations..GRID. # why are there no affiliations??? What to do with NA affiliations? Look at departments instead?
+# dataset$Departments[9]
 
 # Remove outputs in subject areas related to medicine
-names(dataset)
-non_medical_outputs <- !str_detect(dataset$Subjects..FoR., "Medic") # find which outputs have "Medic" in their subject area, 
-                                                                    # reverse the matrix to know which ones do not
-                                                                    # NB: there are also NAs in this. Maybe combine both methods?
+#names(dataset)
+#non_medical_outputs <- !str_detect(dataset$Subjects..FoR., "Medic") # find which outputs have "Medic" in their subject area, 
+                                                                     # reverse the matrix to know which ones do not
+                                                                     # NB: there are also NAs in this. Maybe combine both methods?
 
-dataset %>%
-  filter(!grepl('Medic|Clinic', Subjects..FoR.)) %>% # 4,911 outputs out of 8,102 aren't Medic or Clinic topics
-  select(Subjects..FoR.)
+#dataset %>%
+#  filter(!grepl('Medic|Clinic', Subjects..FoR.)) %>% # 4,911 outputs out of 8,102 aren't Medic or Clinic topics
+#  select(Subjects..FoR.)
 
-dataset %>%
-  filter(!grepl('University Medical Center Groningen', Affiliations..GRID.)) %>% # 4,851 outputs out of 8,102 aren't affiliated to UMCG
-  filter(grepl('Medic|Clinic', Subjects..FoR.)) # out of which 696 outputs have medical topics
+#dataset %>%
+#  filter(!grepl('University Medical Center Groningen', Affiliations..GRID.)) %>% # 4,851 outputs out of 8,102 aren't affiliated to UMCG
+#  filter(grepl('Medic|Clinic', Subjects..FoR.)) # out of which 696 outputs have medical topics
 
-dataset %>%
-  filter(!grepl('University Medical Center Groningen', Affiliations..GRID.)) %>%
-  filter(!grepl('Medic|Clinic', Subjects..FoR.)) # we should get 4,851 - 696 = 4,155 outputs (V)
+#dataset %>%
+#  filter(!grepl('University Medical Center Groningen', Affiliations..GRID.)) %>%
+#  filter(!grepl('Medic|Clinic', Subjects..FoR.)) # we should get 4,851 - 696 = 4,155 outputs (V)
 
-dataset %>%
-  filter(!grepl('UMCG', Departments)) # 4,137 outputs out of 2,899 do not belong to the UMCG department
+#dataset %>%
+#  filter(!grepl('UMCG', Departments)) # 4,137 outputs out of 2,899 do not belong to the UMCG department
 
 # Remove ALL
 
 clean_outputs <- dataset %>%
   filter(!grepl('University Medical Center Groningen', Affiliations..GRID.) &
-           !grepl('Medic|Clinic', Subjects..FoR.) &
+           #!grepl('Medic|Clinic', Subjects..FoR.) &
            !grepl('UMCG', Departments)
          ) # 3,817 outputs
 
@@ -64,7 +64,7 @@ mention_sources <- str_replace(names(mentions),".mentions", "")
 mentions %>% summarise_all(class)
 n_variables <- dim(mentions)[2]
 n_variables_numeric <- dim(mentions %>%
-  filter(if_all(is.numeric)) # should return 17 (V)
+  filter(if_all(where(is.numeric))) # should return 17 (V)
   )[2]
 
 n_variables == n_variables_numeric # all good if TRUE (V)
@@ -132,3 +132,23 @@ ordered_topics_by_mentions %>%
 # -> replicate rows by topic
 
 ordered_topics_by_mentions[1,]
+
+topics_mentions <- clean_outputs %>% 
+  select(c(Subjects..FoR., ends_with("mentions"))) %>%
+  rowwise() %>% 
+  mutate(all_mentions = sum(News.mentions:Syllabi.mentions)) %>%
+  select(c(Subjects..FoR., all_mentions))
+  
+  
+topics_mentions %>%
+  # 1. Separate the subject_area column into multiple rows, assuming subject areas are comma-separated
+  separate_rows(Subjects..FoR., sep = ";\\s*") %>%
+  
+  # 2. Group by the subject_area column
+  group_by(Subjects..FoR.) %>%
+  
+  # 3. Summarize the total mentions for each subject area
+  summarize(total_mentions = sum(all_mentions, na.rm = TRUE)) %>%
+  
+  # 4. Arrange in descending order to see the most mentioned subject areas first
+  arrange(desc(total_mentions))
